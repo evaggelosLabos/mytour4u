@@ -6,7 +6,12 @@ const priceRoutes = require('./routes/priceRoutes');
 const reservationRoutes = require('./routes/reservationRoutes');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['https://eliminatoree1.sg-host.com'], // ✅ Add your frontend domain here
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+}));
+;
 app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
