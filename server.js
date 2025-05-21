@@ -8,11 +8,24 @@ const reservationRoutes = require('./routes/reservationRoutes');
 
 const app = express();
 
+const allowedOrigins = [
+  'https://eliminatoree1.sg-host.com',
+  'http://localhost:3000',
+  'http://localhost:3001',
+];
+
 app.use(cors({
-  origin: ['https://eliminatoree1.sg-host.com'], // ✅ Your frontend domain on SiteGround
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 }));
+
 
 app.use(express.json());
 
