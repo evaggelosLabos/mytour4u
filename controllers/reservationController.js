@@ -4,9 +4,9 @@ const { sendConfirmationEmail } = require('../utils/mailer');
 // Create a New Reservation
 exports.createReservation = async (req, res) => {
   try {
-    const { name, email, phone, pickupLocation, dropoffLocation, transferDate, passengers } = req.body;
+    const { name, email, phone, pickupLocation, dropoffLocation, transferDate, passengers,transferTime } = req.body;
 
-    if (!name || !email || !phone || !pickupLocation || !dropoffLocation || !transferDate || !passengers) {
+    if (!name || !email || !phone || !pickupLocation || !dropoffLocation || !transferDate || !transferTime || !passengers) {
       return res.status(400).json({ error: 'All fields are required.' });
     }
 
@@ -18,6 +18,7 @@ exports.createReservation = async (req, res) => {
       dropoffLocation,
       transferDate,
       passengers,
+      transferTime
     });
 
     await reservation.save();

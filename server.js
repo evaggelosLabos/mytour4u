@@ -9,7 +9,7 @@ const reservationRoutes = require('./routes/reservationRoutes');
 const app = express();
 
 const allowedOrigins = [
-  'https://eliminatoree1.sg-host.com',
+  'https://corfutranfersapp.com',
   'http://localhost:3000',
   'http://localhost:3001',
 ];
