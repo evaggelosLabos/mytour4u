@@ -9,7 +9,7 @@ const reservationRoutes = require('./routes/reservationRoutes');
 const app = express();
 
 const allowedOrigins = [
-  'https://corfutranfersapp.com',
+  'https://corfutransfersapp.com',
   'http://localhost:3000',
   'http://localhost:3001',
 ];
