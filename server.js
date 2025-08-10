@@ -32,12 +32,12 @@ app.use(cors({
 
 app.use(express.json());
 
-// ✅ Basic root route to avoid 404 at /
+// Root route
 app.get('/', (req, res) => {
   res.send('MyTour4U API is running');
 });
 
-// --- Mongo ---
+// Mongo
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -45,14 +45,13 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log('MongoDB Connected'))
 .catch(err => console.error(err));
 
-// --- Routes ---
+// Routes
 app.use('/api/reservations', reservationRoutes);
 app.use('/api', priceRoutes);
 app.use('/api/google', indexingRoutes);
 
-// --- HTTP server & Socket.IO ---
+// HTTP server + Socket.IO
 const server = http.createServer(app);
-
 const io = new Server(server, {
   cors: {
     origin: function (origin, callback) {
@@ -67,27 +66,30 @@ const io = new Server(server, {
   },
 });
 
-// In-memory last-known location (deviceId -> {lat,lng,accuracy,timestamp})
+// Store last known locations
 const lastLocation = new Map();
 
-// Namespace for live location
+// Namespace for live tracking
 const nsp = io.of('/live');
 
 nsp.on('connection', (socket) => {
   const role = socket.handshake.query?.role || 'viewer';
-  const deviceId = socket.handshake.query?.deviceId || 'phone-1';
+  const deviceId = socket.handshake.query?.deviceId || `device-${Math.random().toString(36).substring(2, 8)}`;
 
-  // Each device has its own room
-  socket.join(deviceId);
+  console.log(`[SOCKET] ${role} connected: ${deviceId}`);
 
-  // If an admin joins and we have a snapshot, send it immediately
-  if (role === 'admin' && lastLocation.has(deviceId)) {
-    socket.emit('location:bootstrap', { deviceId, ...lastLocation.get(deviceId) });
+  if (role === 'driver') {
+    socket.join(deviceId);
   }
 
-  // Device pushes updates here
+  if (role === 'admin') {
+    // Send all last-known locations on connect
+    lastLocation.forEach((loc, id) => {
+      socket.emit('location:bootstrap', { deviceId: id, ...loc });
+    });
+  }
+
   socket.on('location:update', (payload) => {
-    // payload: { deviceId, lat, lng, accuracy, timestamp }
     if (!payload || typeof payload.lat !== 'number' || typeof payload.lng !== 'number') return;
 
     const id = payload.deviceId || deviceId;
@@ -99,14 +101,23 @@ nsp.on('connection', (socket) => {
     };
     lastLocation.set(id, rec);
 
-    // Broadcast to viewers of this device
+    // Send to all admins
+    nsp.sockets.forEach((client) => {
+      if (client.handshake.query?.role === 'admin') {
+        client.emit('location:push', { deviceId: id, ...rec });
+      }
+    });
+
+    // Send to this driver's room (if needed)
     nsp.to(id).emit('location:push', { deviceId: id, ...rec });
   });
 
-  socket.on('disconnect', () => {});
+  socket.on('disconnect', () => {
+    console.log(`[SOCKET] ${role} disconnected: ${deviceId}`);
+  });
 });
 
-// REST bootstrap for admins (optional but handy)
+// REST bootstrap for specific device
 app.get('/api/last-location/:deviceId', (req, res) => {
   const id = req.params.deviceId;
   if (!lastLocation.has(id)) return res.status(404).json({ ok: false, message: 'No location yet' });
