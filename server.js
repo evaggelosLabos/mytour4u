@@ -40,7 +40,7 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // --- REST Routes ---
 app.use('/api/reservations', reservationRoutes);
-app.use('/api', priceRoutes);
+app.use('/api/price-requests', priceRoutes);
 app.use('/api/google', indexingRoutes);
 
 // --- HTTP + Socket.IO ---
