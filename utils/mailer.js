@@ -1,28 +1,25 @@
 // utils/mailer.js
-const nodemailer = require('nodemailer');
+const brevo = require('@getbrevo/brevo');
 
-// ⚠️ Replace with your SiteGround email + password
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const apiInstance = new brevo.TransactionalEmailsApi();
+apiInstance.setApiKey(
+  brevo.TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY // 🔑 store in .env
+);
 
 const sendConfirmationEmail = async (to, subject, text) => {
   try {
-    await transporter.sendMail({
-      from: '"Corfiot Transfers" <evanlabos@corfutransfersapp.com>', // sender
-      to,       // recipient
-      subject,  // subject
-      text,     // plain text
-    });
-    console.log("✅ Confirmation email sent to", to);
+    const sendSmtpEmail = {
+      to: [{ email: to }],
+      sender: { name: "Corfiot Transfers", email: "evanlabos@corfutransfersapp.com" },
+      subject,
+      textContent: text,
+    };
+
+    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log("✅ Brevo email sent:", response.messageId);
   } catch (error) {
-    console.error("❌ Failed to send email:", error);
+    console.error("❌ Brevo email failed:", error);
   }
 };
 
