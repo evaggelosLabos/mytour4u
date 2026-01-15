@@ -31,7 +31,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // ✅ IMPORTANT for preflight
+app.options(/.*/, cors(corsOptions));
+
 app.use(express.json());
 
 // Root route
