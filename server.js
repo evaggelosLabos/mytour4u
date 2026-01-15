@@ -14,19 +14,24 @@ const app = express();
 
 const allowedOrigins = [
   'https://corfutransfersapp.com',
+  'https://www.corfutransfersapp.com', // ✅ ADD THIS
   'http://localhost:3000',
   'http://localhost:3001',
 ];
 
 // --- Express/CORS ---
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else callback(new Error('Not allowed by CORS'));
+    else callback(new Error('Not allowed by CORS: ' + origin));
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // ✅ ADD OPTIONS
+  allowedHeaders: ['Content-Type', 'Authorization'],     // ✅ SAFE
   credentials: true,
-}));
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // ✅ IMPORTANT for preflight
 app.use(express.json());
 
 // Root route
@@ -49,9 +54,9 @@ const io = new Server(server, {
   cors: {
     origin: function (origin, callback) {
       if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-      else callback(new Error('Not allowed by CORS'));
+      else callback(new Error('Not allowed by CORS: ' + origin));
     },
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'OPTIONS'], // ✅ ADD OPTIONS (safe)
     credentials: true,
   },
 });
@@ -68,19 +73,16 @@ nsp.on('connection', (socket) => {
   console.log(`[LIVE] connected socket=${socket.id} role=${role} deviceId=${deviceId}`);
 
   if (role === 'driver') {
-    // Optional: drivers join their own room
     socket.join(deviceId);
   }
 
   if (role === 'admin') {
     admins.add(socket);
-    // send ALL last-known locations immediately
     lastLocation.forEach((loc, id) => {
       socket.emit('location:bootstrap', { deviceId: id, ...loc });
     });
   }
 
-  // devices push updates here
   socket.on('location:update', (payload) => {
     if (!payload || typeof payload.lat !== 'number' || typeof payload.lng !== 'number') return;
 
@@ -93,12 +95,10 @@ nsp.on('connection', (socket) => {
     };
     lastLocation.set(id, rec);
 
-    // 1) broadcast to all admins
     admins.forEach((adminSock) => {
       adminSock.emit('location:push', { deviceId: id, ...rec });
     });
 
-    // 2) also emit to that driver's room (if you embed viewer links per driver)
     nsp.to(id).emit('location:push', { deviceId: id, ...rec });
   });
 
